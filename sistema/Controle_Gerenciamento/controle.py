@@ -423,6 +423,11 @@ def funcao_principal():
             print("Opcao inválida! Tente Novamente.")
 
 
+# FUNÇÕES que fiz para não poluir tanto o código
+# Separei por tabelas de BD
+
+# PRODUTOS---------------------------------------------------------------------------------------------------------
+            
 def buscar_produto(id):
     cursor = banco.cursor()
     comando_SQL = "SELECT * FROM produto WHERE idProduto = %s"
@@ -434,8 +439,63 @@ def buscar_produto(id):
         return 1
     else:
         return 0
+    
+    
+def exibir_cardapio():
+    # Mostrar o cardapio
+    cursor = banco.cursor()
+    comando_SQL = "SELECT * FROM produto"
+    cursor.execute(comando_SQL)
+    exibir_cardapio = cursor.fetchall()
 
+    if exibir_cardapio:
+        print("----- Exibir Cardápio ------")
+        for i in range (0, len(exibir_cardapio)):
+            print(f"Id da comida: ",exibir_cardapio[i][0])
+            print(f"Nome: ",exibir_cardapio[i][1])
+            print(f"Preço: ",exibir_cardapio[i][2])
+            print(f"Id da categoria: ",exibir_cardapio[i][3])
+            print("\n----------------------")
+    
 
+def fazer_pedido(data, valor, idCli, idFunc, idMesa, idProd):
+    # Aqui basicamente é o processo de fazer um pedido
+    cursor = banco.cursor()
+    comando_SQL = "INSERT INTO pedido (data, total, idCliente, idFunc, idMesa, idProduto) VALUES (%s, %s, %s, %s, %s, %s)"
+    dados = (str(data), float(valor), int(idCli), int(idFunc), int(idMesa), int(idProd))
+    cursor.execute(comando_SQL, dados)
+    banco.commit()
+
+    # TO COM PREGUIÇA DE COMENTAR O QUE É ISSO AQUI
+    qtd = str(input("Quantidade: "))
+    comando_SQL = "SELECT total FROM produto"
+    cursor.execute(comando_SQL)
+    busca = cursor.fetchall()
+
+    if qtd == 1:
+        subTotal = busca[0][0]
+    elif qtd > 1:
+        subTotal = (busca[0][0]) * qtd
+    
+    comando_SQL = "SELECT idPedido, idProduto, idCliente, data FROM pedido"
+    cursor.execute(comando_SQL)
+    busca = cursor.fetchall()
+
+    if busca:
+        for i in range(0 , len(busca)):
+            print(f"Id do Pedido: ", busca[i][0])
+            print(f"Id do Produto: ", busca[i][1])
+            print(f"Id do Cliente: ", busca[i][2])
+            print(f"Data: ", busca[i][3])
+            print("----------------------------------")
+
+    idPedido = int(input("Informe o id do pedido: "))
+    comando_SQL = "INSERT INTO itemPedido (subtotal, quantidade, idPedido, idProduto) VALUES (%s, %s, %s, %s)"
+    dados = (float(subTotal), int(qtd), int(idPedido), int(idProd))
+    cursor.execute(comando_SQL, dados)
+    banco.commit()
+
+# CATEGORIA---------------------------------------------------------------------------------------------------------
 def exibir_categorias():
     cursor = banco.cursor()
     comando_SQL = "SELECT * from categoria"
@@ -448,7 +508,7 @@ def exibir_categorias():
             print("Id da categoria: ",exibir[i][0])
             print("-----------------------------")
 
-
+# PAGAMENTO---------------------------------------------------------------------------------------------------------
 def imprimir_nota_fiscal():
     cursor = banco.cursor()
     comando_SQL = "SELECT * FROM pagamento"
@@ -486,7 +546,7 @@ def nota_fiscal(id):
         cursor.execute(comando_SQL, dados)
         banco.commit()
 
-
+# PEDIDOS---------------------------------------------------------------------------------------------------------
 def buscar_pedidos_cliente(id):
     contador = 0
     cursor = banco.cursor()
@@ -503,7 +563,6 @@ def buscar_pedidos_cliente(id):
             contador += 1
 
     return contador
-    
 
 
 def listar_pedidos_cliente(id):
@@ -530,47 +589,6 @@ def listar_pedidos_cliente(id):
             print(f"Id da Comida: ",listar_pedidos_de_um_cliente[i][6])
             print("-------------------------------------")
 
-
-def buscar_cliente(cpf):
-    cursor = banco.cursor()
-    comando_SQL = "SELECT idCliente from cliente WHERE cpf = %s"
-    dado = (str(cpf),)
-    cursor.execute(comando_SQL, dado)
-    busca = cursor.fetchall()
-
-    if busca:
-        return busca
-    else:
-        print("Nenhum cliente foi encontrado")
-        return 0
-
-
-def exibir_cardapio():
-    # Mostrar o cardapio
-    cursor = banco.cursor()
-    comando_SQL = "SELECT * FROM produto"
-    cursor.execute(comando_SQL)
-    exibir_cardapio = cursor.fetchall()
-
-    if exibir_cardapio:
-        print("----- Exibir Cardápio ------")
-        for i in range (0, len(exibir_cardapio)):
-            print(f"Id da comida: ",exibir_cardapio[i][0])
-            print(f"Nome: ",exibir_cardapio[i][1])
-            print(f"Preço: ",exibir_cardapio[i][2])
-            print(f"Id da categoria: ",exibir_cardapio[i][3])
-            print("\n----------------------")
-
-
-def fazer_pedido(data, valor, idCli, idFunc, idMesa, idProd):
-    # Aqui basicamente é o processo de fazer um pedido
-    cursor = banco.cursor()
-    comando_SQL = "INSERT INTO pedido (data, total, idCliente, idFunc, idMesa, idProduto) VALUES (%s, %s, %s, %s, %s, %s)"
-    dados = (str(data), float(valor), int(idCli), int(idFunc), int(idMesa), int(idProd))
-    cursor.execute(comando_SQL, dados)
-    banco.commit()
-
-
 def buscar_pedido(id):
     # Buscar um pedido passando como parâmetro o ID
     cursor = banco.cursor()
@@ -584,8 +602,8 @@ def buscar_pedido(id):
     else:
         print("Nenhum pedido foi encontrado!")
         return 0
-
-
+    
+    
 def listar_pedidos():
     # Mostrar todos os pedidos cadastrados
     cursor = banco.cursor()
@@ -607,6 +625,22 @@ def listar_pedidos():
             print(f"Id da Comida: ",busca[i][6])
 
 
+# GERENCIAMENTO DE PEOPLES---------------------------------------------------------------------------------------------------------
+def buscar_cliente(cpf):
+    cursor = banco.cursor()
+    comando_SQL = "SELECT idCliente from cliente WHERE cpf = %s"
+    dado = (str(cpf),)
+    cursor.execute(comando_SQL, dado)
+    busca = cursor.fetchall()
+
+    if busca:
+        return busca
+    else:
+        print("Nenhum cliente foi encontrado")
+        return 0
+
+
+# MESA---------------------------------------------------------------------------------------------------------
 def buscar_mesa(numero):
     cursor = banco.cursor()
     comando_SQL = "SELECT * FROM mesa WHERE numero = %s"
@@ -637,6 +671,7 @@ def listar_mesas():
             print(f"Capacidade: ",exibir_mesas[i][3])
             print("-------------------------")
 
+
 def reservar_mesa():
     # Verificar no BD as mesas que tem disponivel
     cursor = banco.cursor()
@@ -665,5 +700,5 @@ def reservar_mesa():
         return 0
 
 
-
+# FUNÇÃO que o que os olhos não veem o coração não sente
 funcao_principal()
