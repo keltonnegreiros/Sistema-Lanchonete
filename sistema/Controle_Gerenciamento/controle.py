@@ -354,10 +354,10 @@ def funcao_principal():
         elif opcao == 5:
             # NOTA: QUERO MUDAR O NOME DISSO!!!!!! Produtos é muito peba, só que COMIDA ou ALIMENTO sinto que não engloba por exemplo as bebidas :/
             print("------ Gerenciar Produtos ------")
-            print("[1] - Cadastrar Produto")
-            print("[2] - Atualizar Produto")
+            print("[1] - Cadastrar")
+            print("[2] - Atualizar")
             print("[3] - Exibir Cardápio")
-            print("[4] - Remover Produto")
+            print("[4] - Remover")
             escolha = int(input("Escolha a opção desejada: "))
 
             os.system('cls')
