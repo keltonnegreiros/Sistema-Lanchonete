@@ -8,7 +8,7 @@ from pedido import gerenciar_pedido
 
 # Sistema começa aqui
 def funcao_principal():
-    print(f"Entrando no sistema da Lanchonete")
+    print(f"Entrando no sistema da Lanchonete SendYourWish")
 
     while (True):
         # MENU
