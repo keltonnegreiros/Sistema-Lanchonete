@@ -86,4 +86,5 @@ def gerenciar_funcionario():
 
     # Voltar para o MENU principal
     elif opcao == 5:
+        os.system('cls' if os.name == 'nt' else 'clear')
         return "voltar"

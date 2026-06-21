@@ -124,6 +124,8 @@ def gerenciar_pedido():
     from produto import exibir_cardapio
     from pagamento import nota_fiscal, imprimir_nota_fiscal
 
+    os.system('cls' if os.name == 'nt' else 'clear')
+
     print("Escolha uma opção: ")
     print("[1] - Fazer pedido")
     print("[2] - Remover pedido")
