@@ -1,10 +1,21 @@
 import os
 
+from pathlib import Path
 from cliente import gerenciar_cliente
 from funcionario import gerenciar_funcionario
 from mesa import gerenciar_mesa
 from produto import gerenciar_produto
 from pedido import gerenciar_pedido
+from PyQt5 import uic, QtWidgets
+
+# executar o sistema
+app = QtWidgets.QApplication([])
+
+ui_path1 = Path(__file__).with_name("telaPrincipal.ui")
+telaPrincipal = uic.loadUi(str(ui_path1))
+
+telaPrincipal.show()
+app.exec()
 
 # Sistema começa aqui
 def funcao_principal():
