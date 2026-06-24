@@ -103,6 +103,7 @@ def salvarFuncionario():
     dados_lidos = (str(nome), float(salario), str(funcao), int(numero_id))
     cursor.execute(comando_SQL, dados_lidos)
     banco.commit()
+
     # atualizar as janelas
     telaFunc_atualizar.close()
     telaFunc.close()
@@ -146,8 +147,79 @@ def atualizarTabelaFunc():
 
 
 # Mesas -------------------------------------------------------------------------------------------------------
-# EU VOU FAZER ISSO
+def gerenciarMesas():
+    telaPrincipal.close()
+    telaMesas.show()
 
+    telaMesas.bt_voltar.clicked.connect(lambda: [telaMesas.close(), telaPrincipal.show()])
+
+
+def cadastrarMesa():
+    telaMesas.close()
+    telaMesas_cadastrar.show()
+
+
+def confirmarCadastro_mesa():
+    numero = telaMesas_cadastrar.txt_numeroCadastrarMesa.text()
+    # se JÁ EXISTER O NUMERO, NÃO CADASTRAR
+    capacidade  = telaMesas_cadastrar.txt_qtdCadastrarMesa.text()
+    status = "Disponível"
+
+    cursor = banco.cursor()
+    comando_SQL = "INSERT INTO mesa (status, numero, capacidade) VALUES (%s, %s, %s)"
+    dados_lidos = (str(status), int(numero), int(capacidade))
+    cursor.execute(comando_SQL, dados_lidos)
+    banco.commit()
+
+    telaMesas_cadastrar.close()
+    atualizarTabelaMesas()
+    telaMesas.show()
+
+
+def removerMesa():
+    linha = telaMesas.tabela_mesas.currentRow()
+    telaMesas.tabela_mesas.removeRow(linha)
+
+    cursor = banco.cursor()
+    comando_SQL = "SELECT idMesa FROM mesa"
+    cursor.execute(comando_SQL)
+    dados_lidos = cursor.fetchall()
+    valor_id = dados_lidos[linha][0]
+    comando_SQL = "DELETE from mesa WHERE idMesa = %s"
+    dado = (int(valor_id),)
+    cursor.execute(comando_SQL, dado)
+    banco.commit()
+
+
+def listarMesas():
+    # Serve para mostrar TODAS as mesas cadastradas no sistema
+    cursor = banco.cursor()
+    comando_SQL = "SELECT * FROM mesa"
+    cursor.execute(comando_SQL)
+    exibir_mesas = cursor.fetchall()
+
+    telaMesas.tabela_mesas.setRowCount(len(exibir_mesas))
+    telaMesas.tabela_mesas.setColumnCount(4)
+
+    for i in range(0, len(exibir_mesas)):
+         for j in range(0, 4):
+            telaMesas.tabela_mesas.setItem(i, j, QtWidgets.QTableWidgetItem(str(exibir_mesas[i][j])))
+
+
+def atualizarTabelaMesas():
+    telaMesas.show()
+
+    cursor = banco.cursor()
+    comando_SQL = "SELECT * FROM mesa"
+    cursor.execute(comando_SQL)
+    exibir_mesas = cursor.fetchall()
+
+    telaMesas.tabela_mesas.setRowCount(len(exibir_mesas))
+    telaMesas.tabela_mesas.setColumnCount(4)
+
+    for i in range(0, len(exibir_mesas)):
+         for j in range(0, 4):
+            telaMesas.tabela_mesas.setItem(i, j, QtWidgets.QTableWidgetItem(str(exibir_mesas[i][j])))
 
 
 # COMIDAS  -------------------------------------------------------------------------------------------------------
@@ -168,6 +240,8 @@ telaPrincipal = uic.loadUi(str(ui_path1))
 # botões da tela principal
 telaPrincipal.bt_gerFunc.clicked.connect(gerenciarFunc)
 telaPrincipal.bt_gerFunc.clicked.connect(listarFuncionarios) # esse aqui é pra quando o usuário clicar no botão Gerenciar Funcionário, a tabela carregar
+telaPrincipal.bt_gerMesas.clicked.connect(gerenciarMesas)
+telaPrincipal.bt_gerMesas.clicked.connect(listarMesas)
 
 # Tela funcionário
 ui_path2 = Path(__file__).with_name("telaFuncionarios.ui")
@@ -192,6 +266,22 @@ telaFunc_atualizar = uic.loadUi(str(ui_path4))
 
 # botão da tela funcionário_atualizar
 telaFunc_atualizar.bt_confirmarAtualizarFun.clicked.connect(salvarFuncionario)
+
+# Tela mesas 
+ui_path10 = Path(__file__).with_name("telaMesas.ui")
+telaMesas = uic.loadUi(str(ui_path10))
+
+# botão da tela Mesas
+telaMesas.bt_cadastrarMesa.clicked.connect(cadastrarMesa)
+telaMesas.bt_removerMesa.clicked.connect(removerMesa)
+
+# Tela mesas_cadastrar
+ui_path11 = Path(__file__).with_name("telaMesas_cadastrar.ui")
+telaMesas_cadastrar = uic.loadUi(str(ui_path11))
+
+# botão tela mesa_cadastrar
+telaMesas_cadastrar.bt_confirmarCadastro_mesa.clicked.connect(confirmarCadastro_mesa)
+
 
 # aqui é pra mostrar a TELA PRINCIPAL DO SISTEMA e executar o SISTEMA
 telaPrincipal.show()
