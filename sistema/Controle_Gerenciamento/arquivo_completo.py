@@ -2,7 +2,12 @@ from pathlib import Path
 import mysql.connector
 from PyQt5 import uic, QtWidgets
 
-numero_id = 0
+numero_idFunc = 0
+numero_idPedido = 0
+numero_idMesa = 0
+idCli_res = 0
+idFunc_res = 0
+numero_idComid = 0
 
 banco = mysql.connector.connect(
     host="localhost",
@@ -71,7 +76,7 @@ def listarFuncionarios():
 
 
 def atualizarFunc():
-    global numero_id
+    global numero_idFunc
     linha = telaFunc.tabela_funcionarios.currentRow()
 
     cursor = banco.cursor()
@@ -85,22 +90,23 @@ def atualizarFunc():
     func = cursor.fetchall()
     telaFunc_atualizar.show()
 
-    numero_id = valor_id
+    numero_idFunc = valor_id
 
     telaFunc_atualizar.txt_nomeAtualizarFunc.setText(str(func[0][3]))
     telaFunc_atualizar.txt_salarioAtualizarFunc.setText(str(func[0][1]))
     telaFunc_atualizar.txt_funcaoAtualizarFunc.setText(str(func[0][4]))
 
+
 def salvarFuncionario():
     # pega o numero do id
-    global numero_id
+    global numero_idFunc
     nome = telaFunc_atualizar.txt_nomeAtualizarFunc.text()
     salario = telaFunc_atualizar.txt_salarioAtualizarFunc.text()
     funcao = telaFunc_atualizar.txt_funcaoAtualizarFunc.text()
 
     cursor = banco.cursor()
     comando_SQL = "UPDATE funcionario SET nome = %s, salario = %s, funcao = %s WHERE idFunc = %s"
-    dados_lidos = (str(nome), float(salario), str(funcao), int(numero_id))
+    dados_lidos = (str(nome), float(salario), str(funcao), int(numero_idFunc))
     cursor.execute(comando_SQL, dados_lidos)
     banco.commit()
 
@@ -142,8 +148,220 @@ def atualizarTabelaFunc():
 
 
 # Pedidos -------------------------------------------------------------------------------------------------------
-# EU VOU FAZER ISSO
+def gerenciarPedidos():
+    telaPrincipal.close()
+    telaPedidos.show()
 
+    telaPedidos.bt_voltar.clicked.connect(lambda: [telaPedidos.close(), telaPrincipal.show()])
+
+
+def abrirTelaValidacaoPedido():
+    telaPedidos.close()
+    telaPedidos_fazerPedido_validacao.txt_idCliente_fazerPedido.clear()
+    telaPedidos_fazerPedido_validacao.txt_idFunc_fazerPedido.clear()
+    telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_cli.clear()
+    telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_func.clear()
+    telaPedidos_fazerPedido_validacao.show()
+
+
+def validarPedido():
+    idCli = telaPedidos_fazerPedido_validacao.txt_idCliente_fazerPedido.text().strip()
+    idFunc = telaPedidos_fazerPedido_validacao.txt_idFunc_fazerPedido.text().strip()
+
+    if not idCli or not idFunc:
+        if not idCli:
+            telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_cli.setText("Preencha o ID do cliente")
+        else:
+            telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_cli.clear()
+
+        if not idFunc:
+            telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_func.setText("Preencha o ID do funcionário")
+        else:
+            telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_func.clear()
+        return
+
+    idCli_res = buscarCli_id(idCli)
+    idFunc_res = buscarFunc_id(idFunc)
+
+    if idCli_res == 1 and idFunc_res == 1:
+        telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_func.setText("Cadastrado")
+        telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_cli.setText("Cadastrado")
+        telaPedidos_fazerPedido_validacao.close()
+        telaPedidos_fazerPedido_reservarMesa.show()
+        exibirMesasDisponiveis()
+    else:
+        if idCli_res == 1:
+            telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_cli.setText("Cadastrado")
+        else:
+            telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_cli.setText("Não Cadastrado")
+
+        if idFunc_res == 1:
+            telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_func.setText("Cadastrado")
+        else:
+            telaPedidos_fazerPedido_validacao.txt_resultadoValidacao_func.setText("Não Cadastrado")
+
+
+
+
+def buscarCli_id(id):
+    try:
+        dado = (int(id),)
+    except (ValueError, TypeError):
+        return 0
+
+    cursor = banco.cursor()
+    comando_SQL = "SELECT idCliente FROM cliente WHERE idCliente = %s"
+    cursor.execute(comando_SQL, dado)
+    resultado = cursor.fetchone()
+    return 1 if resultado else 0
+
+
+def buscarFunc_id(id):
+    try:
+        dado = (int(id),)
+    except (ValueError, TypeError):
+        return 0
+
+    cursor = banco.cursor()
+    comando_SQL = "SELECT idFunc FROM funcionario WHERE idFunc = %s"
+    cursor.execute(comando_SQL, dado)
+    resultado = cursor.fetchone()
+    return 1 if resultado else 0
+
+
+def exibirMesasDisponiveis():
+    # Verificar no BD as mesas que tem disponivel
+    cursor = banco.cursor()
+    comando_SQL = "SELECT * FROM mesa WHERE status = 'Disponível'"
+    cursor.execute(comando_SQL)
+    exibir_mesas = cursor.fetchall()
+
+    telaPedidos_fazerPedido_reservarMesa.tabela_mesasPedidos.setRowCount(len(exibir_mesas))
+    telaPedidos_fazerPedido_reservarMesa.tabela_mesasPedidos.setColumnCount(4)
+
+    for i in range(0, len(exibir_mesas)):
+         for j in range(0, 4):
+            telaPedidos_fazerPedido_reservarMesa.tabela_mesasPedidos.setItem(i, j, QtWidgets.QTableWidgetItem(str(exibir_mesas[i][j])))
+
+
+def reservarMesas():
+    global numero_idMesa
+    linha = telaPedidos_fazerPedido_reservarMesa.tabela_mesasPedidos.currentRow()
+
+    cursor = banco.cursor()
+    comando_SQL = "SELECT idMesa FROM mesa"
+    cursor.execute(comando_SQL)
+    dados_lidos = cursor.fetchall()
+    valor_id = dados_lidos[linha][0]
+    comando_SQL = "SELECT * FROM mesa WHERE idMesa = %s"
+    dado = (int(valor_id),)
+    cursor.execute(comando_SQL, dado)
+    pedido = cursor.fetchall()
+
+    if pedido:
+        numero_idMesa = valor_id
+        comando_SQL = "UPDATE mesa SET status = 'Ocupada' WHERE idMesa = %s"
+        dado = (int(numero_idMesa),)
+        cursor.execute(comando_SQL, dado)
+        banco.commit()
+        # aqui vai abrir a tela de exibir o cardápio
+        telaPedidos_fazerPedido_reservarMesa.close()
+        telaPedidos_fazerPedido_exibirCardapio.show()
+    else:
+        telaPedidos_fazerPedido_reservarMesa.close()
+        telaPedidos.show()
+    
+
+def atualizarPedido():
+    global numero_idPedido
+    linha = telaPedidos.tabela_pedidos.currentRow()
+
+    cursor = banco.cursor()
+    comando_SQL = "SELECT idPedido FROM pedido"
+    cursor.execute(comando_SQL)
+    dados_lidos = cursor.fetchall()
+    valor_id = dados_lidos[linha][0]
+    comando_SQL = "SELECT * FROM pedido WHERE idPedido = %s"
+    dado = (int(valor_id),)
+    cursor.execute(comando_SQL, dado)
+    pedido = cursor.fetchall()
+    telaPedidos_atualizar.show()
+
+    numero_idPedido = valor_id
+
+    telaPedidos_atualizar.txt_dataAtualizarPedido.setText(str(pedido[0][1]))
+    telaPedidos_atualizar.txt_valorAtualizarPedido.setText(str(pedido[0][2]))
+    telaPedidos_atualizar.txt_idCliAtualizarPedido.setText(str(pedido[0][3]))
+    telaPedidos_atualizar.txt_idFuncAtualizarPedido.setText(str(pedido[0][4]))
+    telaPedidos_atualizar.txt_idMesaAtualizarPedido.setText(str(pedido[0][5]))
+    telaPedidos_atualizar.txt_idComidaAtualizarPedido.setText(str(pedido[0][6]))
+
+
+def salvarPedido():
+    # pega o numero do id
+    global numero_idPedido
+    data = telaPedidos_atualizar.txt_dataAtualizarPedido.text()
+    valor = telaPedidos_atualizar.txt_valorAtualizarPedido.text()
+    idCli = telaPedidos_atualizar.txt_idCliAtualizarPedido.text()
+    idFunc = telaPedidos_atualizar.txt_idFuncAtualizarPedido.text()
+    idMesa = telaPedidos_atualizar.txt_idMesaAtualizarPedido.text()
+    idComida = telaPedidos_atualizar.txt_idComidaAtualizarPedido.text()
+
+    cursor = banco.cursor()
+    comando_SQL = "UPDATE pedido SET data = %s, total = %s, idCliente = %s, idFunc = %s, idMesa = %s, idProduto = %s WHERE idPedido = %s"
+    dados = (str(data), float(valor), int(idCli), int(idFunc), int(idMesa), int(idComida), int(numero_idPedido))
+    cursor.execute(comando_SQL, dados)
+    banco.commit()
+
+    # atualizar as janelas
+    telaPedidos_atualizar.close()
+    telaPedidos.close()
+    atualizarTabelaPedidos()
+
+
+def removerPedido():
+    linha = telaPedidos.tabela_pedidos.currentRow()
+    telaPedidos.tabela_pedidos.removeRow(linha)
+
+    cursor = banco.cursor()
+    comando_SQL = "SELECT idPedido FROM pedido"
+    cursor.execute(comando_SQL)
+    dados_lidos = cursor.fetchall()
+    valor_id = dados_lidos[linha][0]
+    comando_SQL = "DELETE FROM pedido WHERE idPedido = %s"
+    dado = (int(valor_id),)
+    cursor.execute(comando_SQL, dado)
+
+
+def listarPedidos():
+    # Mostrar todos os pedidos cadastrados
+    cursor = banco.cursor()
+    comando_SQL = "SELECT * from pedido"
+    cursor.execute(comando_SQL)
+    dados_lidos = cursor.fetchall()
+
+    telaPedidos.tabela_pedidos.setRowCount(len(dados_lidos))
+    telaPedidos.tabela_pedidos.setColumnCount(6)
+
+    for i in range(0, len(dados_lidos)):
+         for j in range(0, 6):
+            telaPedidos.tabela_pedidos.setItem(i, j, QtWidgets.QTableWidgetItem(str(dados_lidos[i][j])))
+
+
+def atualizarTabelaPedidos():
+    telaPedidos.show()
+
+    cursor = banco.cursor()
+    comando_SQL = "SELECT * from pedido"
+    cursor.execute(comando_SQL)
+    dados_lidos = cursor.fetchall()
+
+    telaPedidos.tabela_pedidos.setRowCount(len(dados_lidos))
+    telaPedidos.tabela_pedidos.setColumnCount(6)
+
+    for i in range(0, len(dados_lidos)):
+         for j in range(0, 6):
+            telaPedidos.tabela_pedidos.setItem(i, j, QtWidgets.QTableWidgetItem(str(dados_lidos[i][j])))
 
 
 # Mesas -------------------------------------------------------------------------------------------------------
@@ -223,10 +441,86 @@ def atualizarTabelaMesas():
 
 
 # COMIDAS  -------------------------------------------------------------------------------------------------------
-# lica tu vau fazer essa parte aquirrr!!!!
+def gerenciarComidas():
+    telaPrincipal.close()
+    telaComidas.show()
+    telaComidas.bt_voltar.clicked.connect(lambda: [telaComidas.close(), telaPrincipal.show()])
 
 
+def cadastrarComida():
+    telaComidas.close()
+    telaCadastrarProduto.show()
 
+def 
+
+
+def listarComidas():
+    cursor = banco.cursor()
+    cursor.execute("SELECT idProduto, nome, preco, idCategoria FROM produto")
+    busca = cursor.fetchall()
+
+    telaComidas.tabela_cardapio.setRowCount(len(busca))
+    telaComidas.tabela_cardapio.setColumnCount(4)
+
+    for i in range(len(busca)):
+        for j in range(4):
+            telaComidas.tabela_cardapio.setItem(i, j, QtWidgets.QTableWidgetItem(str(busca[i][j])))
+
+
+def atualizarComida():
+    global numero_idComida
+    linha = telaComidas.tabela_cardapio.currentRow()
+
+    cursor = banco.cursor()
+    cursor.execute("SELECT idProduto FROM produto")
+    dados_lidos = cursor.fetchall()
+    print(dados_lidos)
+    valor_id = dados_lidos[linha][0]
+    print(valor_id)
+
+    cursor.execute("SELECT idProduto, nome, preco, idCategoria FROM produto WHERE idProduto = %s", (int(valor_id),))
+    produto = cursor.fetchall()
+
+    numero_idComida = valor_id
+    print(numero_idComid)
+
+    telaComidas_atualizar.input_nome.setText(str(produto[0][1]))
+    telaComidas_atualizar.input_preco.setText(str(produto[0][2]))
+    telaComidas_atualizar.input_categoria.setText(str(produto[0][3]))  # novo
+
+    telaComidas.close()
+    telaComidas_atualizar.show()
+
+def salvarComida():
+    global numero_idComida
+    nome      = telaComidas_atualizar.input_nome.text()
+    preco     = telaComidas_atualizar.input_preco.text()
+    categoria = telaComidas_atualizar.input_categoria.text()  # novo
+
+    cursor = banco.cursor()
+    cursor.execute(
+        "UPDATE produto SET nome = %s, preco = %s, idCategoria = %s WHERE idProduto = %s",
+        (str(nome), float(preco), int(categoria), int(numero_idComida))
+    )
+    banco.commit()
+
+    telaComidas_atualizar.close()
+    atualizarTabelaComidas()
+
+
+def atualizarTabelaComidas():
+    telaComidas.show()
+
+    cursor = banco.cursor()
+    cursor.execute("SELECT idProduto, nome, preco, idCategoria FROM produto")
+    dados_lidos = cursor.fetchall()
+
+    telaComidas.tabela_cardapio.setRowCount(len(dados_lidos))
+    telaComidas.tabela_cardapio.setColumnCount(4)
+
+    for i in range(len(dados_lidos)):
+        for j in range(4):
+            telaComidas.tabela_cardapio.setItem(i, j, QtWidgets.QTableWidgetItem(str(dados_lidos[i][j])))
 
 
 # faz com que o sistema funcione
@@ -242,6 +536,10 @@ telaPrincipal.bt_gerFunc.clicked.connect(gerenciarFunc)
 telaPrincipal.bt_gerFunc.clicked.connect(listarFuncionarios) # esse aqui é pra quando o usuário clicar no botão Gerenciar Funcionário, a tabela carregar
 telaPrincipal.bt_gerMesas.clicked.connect(gerenciarMesas)
 telaPrincipal.bt_gerMesas.clicked.connect(listarMesas)
+telaPrincipal.bt_gerPedidos.clicked.connect(gerenciarPedidos)
+telaPrincipal.bt_gerPedidos.clicked.connect(listarPedidos)
+telaPrincipal.bt_gerComidas.clicked.connect(gerenciarComidas)
+telaPrincipal.bt_gerComidas.clicked.connect(listarComidas)
 
 # Tela funcionário
 ui_path2 = Path(__file__).with_name("telaFuncionarios.ui")
@@ -282,6 +580,61 @@ telaMesas_cadastrar = uic.loadUi(str(ui_path11))
 # botão tela mesa_cadastrar
 telaMesas_cadastrar.bt_confirmarCadastro_mesa.clicked.connect(confirmarCadastro_mesa)
 
+# tela pedidos
+ui_path12 = Path(__file__).with_name("telaPedidos.ui")
+telaPedidos = uic.loadUi(str(ui_path12))
+
+# botões da tela mesas
+telaPedidos.bt_fazerPedido.clicked.connect(abrirTelaValidacaoPedido)
+telaPedidos.bt_removerPedido.clicked.connect(removerPedido)
+telaPedidos.bt_atualizarPedido.clicked.connect(atualizarPedido)
+# telaPedidos.bt_pagamento.clicked.connect()
+
+# tela pedidos_atualizar
+ui_path13 = Path(__file__).with_name("telaPedidos_atualizar.ui")
+telaPedidos_atualizar = uic.loadUi(str(ui_path13))
+
+# botão tela pedido_atualizar
+telaPedidos_atualizar.bt_confirmarAtualizarPedido.clicked.connect(salvarPedido)
+
+# tela pedidos_fazerPedido_validacao
+ui_path14 = Path(__file__).with_name("telaPedidos_fazerPedido_validacao.ui")
+telaPedidos_fazerPedido_validacao = uic.loadUi(str(ui_path14))
+
+# botão da tela pedidos_fazerPedido_validacao
+telaPedidos_fazerPedido_validacao.bt_validar.clicked.connect(validarPedido)
+
+# tela pedidos_fazerPedido_reservarMesa
+ui_path15 = Path(__file__).with_name("telaPedidos_fazerPedido_reservarMesa.ui")
+telaPedidos_fazerPedido_reservarMesa = uic.loadUi(str(ui_path15))
+
+# botão da tela pedidos_fazerPedido_reservarMesa
+telaPedidos_fazerPedido_reservarMesa.bt_confirmacaoReservarMesa.clicked.connect(reservarMesas)
+
+# tela pedidos_fazerPedido_exibirCardapio
+ui_path16 = Path(__file__).with_name("telaPedidos_fazerPedido_exibirCardapio.ui")
+telaPedidos_fazerPedido_exibirCardapio = uic.loadUi(str(ui_path16))
+
+# botão da tela pedidos_fazerPedido_exibirCardapio
+
+
+# telaPedidos_fazerPedido_exibirCardapio
+
+# Tela comidas
+ui_path18 = Path(__file__).with_name("telaComidas.ui")
+telaComidas = uic.loadUi(str(ui_path18))
+
+telaComidas.bt_atualizarComida.clicked.connect(atualizarComida)
+
+# Tela comidas_atualizar
+ui_path19= Path(__file__).with_name("telaAtualizarComida.ui")
+telaComidas_atualizar = uic.loadUi(str(ui_path19))
+
+telaComidas_atualizar.bt_salvar.clicked.connect(salvarComida)
+
+# Tela comida_cadastrar
+ui_path20 = Path(__file__).with_name("telaCadastrarProduto.ui")
+telaCadastrarProduto = uic.loadUi(str(ui_path20))
 
 # aqui é pra mostrar a TELA PRINCIPAL DO SISTEMA e executar o SISTEMA
 telaPrincipal.show()
